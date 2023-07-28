@@ -1,0 +1,40 @@
+library(quantmod)
+# Store adjusted close within ecosystem
+ecosystem <- new.env()
+ticker_list <- c("AAPL", "MSFT", "AMZN")
+getSymbols(ticker_list, env <- ecosystem, from = "2000-01-01", to = "2019-01-01")
+stocks_close <- do.call(merge, eapply(ecosystem, Ad))
+head(stocks_close[1])
+# Check for irregularities
+plot(stocks_close)
+stocks_close[is.na(stocks_close)]
+# Trend indicator
+trend <- lapply(stocks_close, CTI)
+trend <- Reduce(merge, trend)
+# Initialize portfolio objects
+equal_port <- xts(order.by = index(stocks_close))
+tweight_port <- xts(order.by = index(stocks_close))
+# Rank trend 
+# If i dont use open, i need to lag pct_change
+trend_rank <- as.xts(t(apply(trend, MARGIN = 1, FUN = rank)))
+colnames(trend_rank) <- ticker_list
+# Create allocations
+prices <- stocks_close
+criterion <- trend_rank
+init_balance <- 100
+portfolio <- equal_port
+rebalance_n <- 12
+init_date <- first(index(portfolio))
+  pct_change <- diff(prices) / stats::lag(prices, 1)
+  pct_change[1] <- 1
+  index <- apply(criterion, 1, which.min)
+  portfolio[init_date] <- init_balance
+  for (i in length(pct_change[, 1])) {
+    if (i == 1) {
+      portfolio[i] <- init_balance * (1 + pct_change[i, as.numeric(index[init_date])])
+    } else if (i > 0) {
+      portfolio[i] <- portfolio[i-1] * (1 + pct_change[i, as.numeric(index[init_date])])
+    } else if (i == rebalance_n) {
+      init_date <- index(portfolio[i])
+    }
+allocate(prices = stocks_close, criterion = trend_rank, portfolio = equal_port)
